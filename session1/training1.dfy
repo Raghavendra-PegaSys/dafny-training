@@ -120,33 +120,31 @@ method unique(a: seq<int>) returns (b: seq<int>)
     // every element of b should be in a
     ensures forall k :: 0 <= k < |b| ==> b[k] in a
     // conversely every element of a should also be in b
-    // ensures forall k :: 0 <= k < |a| ==> a[k] in b
+    ensures forall k :: 0 <= k < |a| ==> a[k] in b
     // result is sorted as well
-    // ensures sorted(b)
+    ensures sorted(b)
     // uniqueness. no element appears in its suffix-subsequence.
-    // ensures forall k :: 0 <= k < |b|-1 ==> b[k] !in b[k+1..]
+    ensures forall k :: 0 <= k < |b|-1 ==> b[k] !in b[k+1..]
 {
-    b := [];
     if(|a| == 0) {
-        return;
+        return [];
     }
 
-    // a is of size >= 1
+    // If the control reaches here, a is guaranteed to be of size >= 1
     var i := 1;
-    var elem := a[0];
-    b := b + [elem];
+    b := [a[0]];
 
     while i < |a| 
     decreases |a| - i
     invariant 1 <= i <= |a|
-    // invariant sorted(b)
-    // invariant forall k :: 0 <= k < i ==> a[k] in b
+    invariant sorted(b)
+    invariant forall k :: 0 <= k < i ==> a[k] in b
     invariant forall k :: 0 <= k < |b| ==> b[k] in a
-    // invariant forall k :: (0 <= k < |b|-1 && b[k] !in b[k+1..])
+    invariant forall k :: (0 <= k < |b| - 1 ==> b[k] !in b[k+1..])
+    invariant a[i-1] == b[|b|-1];
     {
-        if(a[i] != elem) {
-            elem := a[i];
-            b := b + [elem];
+        if(a[i] != a[i-1]) {
+            b := b + [a[i]];
         }
         i := i + 1;
     }
