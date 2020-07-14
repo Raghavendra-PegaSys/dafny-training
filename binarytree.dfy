@@ -45,38 +45,12 @@ decreases y
     else x * power(x, y-1)
 }
 
-/*function method equals(t1: BinaryTree<int>, t2: BinaryTree<int>) : bool 
-decreases t1, t2
-{
-    match t1
-    case Nil => if t2 == Nil then true else false 
-    case ConsBT (x, xleft, xright) => (
-        match t2
-        case ConsBT (y, yleft, yright) => (x == y && equals(xleft, yleft) && equals(xright, yright))
-        case Nil => false )
-}
-function method contains (tree: BinaryTree<int>, subTree: BinaryTree<int>) : bool 
-decreases tree
-{
-    if subTree == Nil then true 
-    else (
-        match tree
-        case Nil => false
-        case ConsBT (x, leftSubTree, rightSubTree) =>
-            (equals(leftSubTree, subTree) || equals(rightSubTree, subTree) || contains(leftSubTree, subTree) || contains(rightSubTree, subTree)))
-}*/
-
 method Main() {
     var tree := ConsBT(2, ConsBT(3, Nil, Nil), ConsBT(4, Nil, Nil));
     print "Number of leaves = ", numberOfLeaves(tree), "\n";
     print "Number of nodes = ", numberOfNodes(tree), "\n";
     print "Height = ", height(tree), "\n";
-    // print "Check containment = ", contains(tree, Nil), contains(tree, ConsBT(4, Nil, Nil));
 }
-
-/*ghost method LemmaSubTreeHeight(subTree: BinaryTree<int>, tree: BinaryTree<int>)
-requires contains(tree, subTree)
-ensures height(subTree) < height(tree)*/
 
 ghost method LemmaMonotinictyPower(x: nat, y: nat)
 requires x < y
