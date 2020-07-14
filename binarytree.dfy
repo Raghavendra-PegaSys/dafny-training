@@ -89,15 +89,13 @@ ensures power(2, x) + power(2, y) <= power(2, 1 + max(x,y))
     }
 }
 
-ghost method LemmaLeavesAndHeight(tree:BinaryTree<int>) 
+lemma LemmaLeavesAndHeight(tree:BinaryTree<int>) 
 decreases tree
 requires 0 < height(tree) 
 ensures numberOfLeaves(tree) <= power(2 ,height(tree) - 1) 
 {
     match tree
     case ConsBT (x, leftSubTree, rightSubTree) =>
-        assert height(leftSubTree) < height(tree);
-        assert height(rightSubTree) < height(tree);
         if(leftSubTree ==  Nil) {
             if(rightSubTree == Nil) {
                 calc <= {
@@ -105,13 +103,13 @@ ensures numberOfLeaves(tree) <= power(2 ,height(tree) - 1)
                     power(2, height(tree) - 1);
                 }
             } else {
-                assert height(rightSubTree)-1 < height(tree)-1;
                 calc <= {
                     numberOfLeaves(tree);
                     numberOfLeaves(rightSubTree);
                     { LemmaLeavesAndHeight(rightSubTree); }
                     power(2, height(rightSubTree) - 1);
-                    { LemmaMonotinictyPower(height(rightSubTree)-1, height(tree)-1); }
+                    { assert height(rightSubTree)-1 < height(tree)-1;
+                    LemmaMonotinictyPower(height(rightSubTree)-1, height(tree)-1); }
                     power(2, height(tree) - 1);
                 }
             }
@@ -133,14 +131,10 @@ ensures numberOfLeaves(tree) <= power(2 ,height(tree) - 1)
                     numberOfLeaves(leftSubTree) + numberOfLeaves(rightSubTree);
                     { LemmaLeavesAndHeight(rightSubTree); LemmaLeavesAndHeight(leftSubTree); }
                     power(2, height(leftSubTree) - 1) + power(2, height(rightSubTree) - 1);
-                    { //LemmaMonotinictyPower(height(leftSubTree)-1, height(tree)-1); 
-                    //LemmaMonotinictyPower(height(rightSubTree)-1, height(tree)-1);
-                    LemmaPowers(height(leftSubTree) - 1, height(rightSubTree) - 1);
-                    }
+                    { LemmaPowers(height(leftSubTree) - 1, height(rightSubTree) - 1); }
                     power(2, 1 + max(height(leftSubTree) - 1,height(rightSubTree) - 1));
                     {  assert height(tree) - 1 == 1 + max(height(leftSubTree) - 1, height(rightSubTree) - 1);}
-                    // power(2, x) + power(2, y) <= power(2, 1 + max(x,y))
-                     power(2, height(tree) - 1);
+                    power(2, height(tree) - 1);
                 }
             }
         }
