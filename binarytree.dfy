@@ -80,121 +80,121 @@ ensures power(2, x) + power(2, y) <= power(2, 1 + max(x,y))
     }
 }
 
-// lemma LemmaLeavesAndHeight(tree:BinaryTree<int>) 
-// decreases tree
-// requires 0 < height(tree) 
-// ensures numberOfLeaves(tree) <= power(2 ,height(tree) - 1) 
-// {
-//     match tree
-//     case ConsBT (x, leftSubTree, rightSubTree) =>
-//         if(leftSubTree ==  Nil) {
-//             if(rightSubTree == Nil) {
-//                 calc <= {
-//                     numberOfLeaves(tree);
-//                     power(2, height(tree) - 1);
-//                 }
-//             } else {
-//                 calc <= {
-//                     numberOfLeaves(tree);
-//                     numberOfLeaves(rightSubTree);
-//                     { LemmaLeavesAndHeight(rightSubTree); }
-//                     power(2, height(rightSubTree) - 1);
-//                     { assert height(rightSubTree)-1 < height(tree)-1;
-//                     LemmaMonotinictyPower(height(rightSubTree)-1, height(tree)-1); }
-//                     power(2, height(tree) - 1);
-//                 }
-//             }
-//         } else {
-//             assert height(leftSubTree)-1 < height(tree)-1;
-//             assert height(rightSubTree)-1 < height(tree)-1;
-//             if(rightSubTree == Nil) {
-//                 calc <= {
-//                     numberOfLeaves(tree);
-//                     numberOfLeaves(leftSubTree);
-//                     { LemmaLeavesAndHeight(leftSubTree); }
-//                     power(2, height(leftSubTree) - 1);
-//                     { LemmaMonotinictyPower(height(leftSubTree)-1, height(tree)-1); }
-//                     power(2, height(tree) - 1);
-//                 }
-//             } else {
-//                 calc <= {
-//                     numberOfLeaves(tree);
-//                     numberOfLeaves(leftSubTree) + numberOfLeaves(rightSubTree);
-//                     { LemmaLeavesAndHeight(rightSubTree); LemmaLeavesAndHeight(leftSubTree); }
-//                     power(2, height(leftSubTree) - 1) + power(2, height(rightSubTree) - 1);
-//                     { LemmaPowers(height(leftSubTree) - 1, height(rightSubTree) - 1); }
-//                     power(2, 1 + max(height(leftSubTree) - 1,height(rightSubTree) - 1));
-//                     {  assert height(tree) - 1 == 1 + max(height(leftSubTree) - 1, height(rightSubTree) - 1);}
-//                     power(2, height(tree) - 1);
-//                 }
-//             }
-//         }
-// }
+lemma LemmaLeavesAndHeight(tree:BinaryTree<int>) 
+decreases tree
+requires 0 < height(tree) 
+ensures numberOfLeaves(tree) <= power(2 ,height(tree) - 1) 
+{
+    match tree
+    case ConsBT (x, leftSubTree, rightSubTree) =>
+        if(leftSubTree ==  Nil) {
+            if(rightSubTree == Nil) {
+                calc <= {
+                    numberOfLeaves(tree);
+                    power(2, height(tree) - 1);
+                }
+            } else {
+                calc <= {
+                    numberOfLeaves(tree);
+                    numberOfLeaves(rightSubTree);
+                    { LemmaLeavesAndHeight(rightSubTree); }
+                    power(2, height(rightSubTree) - 1);
+                    { assert height(rightSubTree)-1 < height(tree)-1;
+                    LemmaMonotinictyPower(height(rightSubTree)-1, height(tree)-1); }
+                    power(2, height(tree) - 1);
+                }
+            }
+        } else {
+            assert height(leftSubTree)-1 < height(tree)-1;
+            assert height(rightSubTree)-1 < height(tree)-1;
+            if(rightSubTree == Nil) {
+                calc <= {
+                    numberOfLeaves(tree);
+                    numberOfLeaves(leftSubTree);
+                    { LemmaLeavesAndHeight(leftSubTree); }
+                    power(2, height(leftSubTree) - 1);
+                    { LemmaMonotinictyPower(height(leftSubTree)-1, height(tree)-1); }
+                    power(2, height(tree) - 1);
+                }
+            } else {
+                calc <= {
+                    numberOfLeaves(tree);
+                    numberOfLeaves(leftSubTree) + numberOfLeaves(rightSubTree);
+                    { LemmaLeavesAndHeight(rightSubTree); LemmaLeavesAndHeight(leftSubTree); }
+                    power(2, height(leftSubTree) - 1) + power(2, height(rightSubTree) - 1);
+                    { LemmaPowers(height(leftSubTree) - 1, height(rightSubTree) - 1); }
+                    power(2, 1 + max(height(leftSubTree) - 1,height(rightSubTree) - 1));
+                    {  assert height(tree) - 1 == 1 + max(height(leftSubTree) - 1, height(rightSubTree) - 1);}
+                    power(2, height(tree) - 1);
+                }
+            }
+        }
+}
 
-// lemma LemmaPowerIncrement(x: nat)
-// ensures power(2, x) <= power(2, x+1) - 1
-// {
+lemma LemmaPowerIncrement(x: nat)
+ensures power(2, x) <= power(2, x+1) - 1
+{
 
-// }
+}
 
-// lemma LemmaNodesAndHeight(tree: BinaryTree<int>)
-// requires 0 < height(tree)
-// ensures numberOfNodes(tree) <= power(2, height(tree)) - 1
-// {
-//     var level := 0;
-//     var numNodesInCurrentLevel := 1;
-//     match tree
-//     case ConsBT (val, left, right) =>
-//         if(left == Nil) {
-//             if(right == Nil) { 
-//                 calc <= {
-//                     numberOfNodes(tree);
-//                     power(2, height(tree)) - 1;
-//                 }
-//             } else {
-//                 calc <= {
-//                     numberOfNodes(tree);
-//                     1 + numberOfNodes(right);
-//                     { LemmaNodesAndHeight(right); }
-//                     1 + power(2, height(right)) - 1;
-//                     power(2, height(right));
-//                     { LemmaPowerIncrement(height(right));}
-//                     power(2, height(right)+1) - 1;
-//                     { assert height(right) + 1 == height(tree); }
-//                     power(2, height(tree)) - 1;
-//                 }
-//             }
-//         } else {
-//             if(right == Nil) {
-//                 calc <= {
-//                     numberOfNodes(tree);
-//                     1 + numberOfNodes(left);
-//                     { LemmaNodesAndHeight(left); }
-//                     1 + power(2, height(left)) - 1;
-//                     power(2, height(left));
-//                     { LemmaPowerIncrement(height(left));}
-//                     power(2, height(left)+1) - 1;
-//                     { assert height(left) + 1 == height(tree); }
-//                     power(2, height(tree)) - 1;
-//                 }
-//             } else {
-//                 var maxH := max(height(left), height(right));
-//                 calc <= {
-//                     numberOfNodes(tree);
-//                     1 + numberOfNodes(left) + numberOfNodes(right);
-//                     { LemmaNodesAndHeight(left); LemmaNodesAndHeight(right); }
-//                     1 + power(2, height(left)) - 1 + power(2, height(right)) - 1;
-//                     { LemmaMonotinictyPowerEquals(height(left), maxH); 
-//                     LemmaMonotinictyPowerEquals(height(right), maxH); } 
-//                     1 + power(2, maxH) - 1 + power(2, maxH) - 1;
-//                     power(2, maxH) + power(2, maxH) - 1;
-//                     power(2, maxH + 1) - 1;
-//                     { assert height(tree) == 1 + maxH; }
-//                     power(2, height(tree)) - 1;
-//                 }
-//             }
-//         }
-// }
+lemma LemmaNodesAndHeight(tree: BinaryTree<int>)
+requires 0 < height(tree)
+ensures numberOfNodes(tree) <= power(2, height(tree)) - 1
+{
+    var level := 0;
+    var numNodesInCurrentLevel := 1;
+    match tree
+    case ConsBT (val, left, right) =>
+        if(left == Nil) {
+            if(right == Nil) { 
+                calc <= {
+                    numberOfNodes(tree);
+                    power(2, height(tree)) - 1;
+                }
+            } else {
+                calc <= {
+                    numberOfNodes(tree);
+                    1 + numberOfNodes(right);
+                    { LemmaNodesAndHeight(right); }
+                    1 + power(2, height(right)) - 1;
+                    power(2, height(right));
+                    { LemmaPowerIncrement(height(right));}
+                    power(2, height(right)+1) - 1;
+                    { assert height(right) + 1 == height(tree); }
+                    power(2, height(tree)) - 1;
+                }
+            }
+        } else {
+            if(right == Nil) {
+                calc <= {
+                    numberOfNodes(tree);
+                    1 + numberOfNodes(left);
+                    { LemmaNodesAndHeight(left); }
+                    1 + power(2, height(left)) - 1;
+                    power(2, height(left));
+                    { LemmaPowerIncrement(height(left));}
+                    power(2, height(left)+1) - 1;
+                    { assert height(left) + 1 == height(tree); }
+                    power(2, height(tree)) - 1;
+                }
+            } else {
+                var maxH := max(height(left), height(right));
+                calc <= {
+                    numberOfNodes(tree);
+                    1 + numberOfNodes(left) + numberOfNodes(right);
+                    { LemmaNodesAndHeight(left); LemmaNodesAndHeight(right); }
+                    1 + power(2, height(left)) - 1 + power(2, height(right)) - 1;
+                    { LemmaMonotinictyPowerEquals(height(left), maxH); 
+                    LemmaMonotinictyPowerEquals(height(right), maxH); } 
+                    1 + power(2, maxH) - 1 + power(2, maxH) - 1;
+                    power(2, maxH) + power(2, maxH) - 1;
+                    power(2, maxH + 1) - 1;
+                    { assert height(tree) == 1 + maxH; }
+                    power(2, height(tree)) - 1;
+                }
+            }
+        }
+}
 
 predicate completeTree(tree: BinaryTree<int>) {
     match tree
