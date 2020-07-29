@@ -143,12 +143,12 @@ ensures n <= n' && trace(n').cs[p] == Eating
         var q := CurrentlyServedProcess(trace(n'));
         if trace(n').cs[q] == Hungry {
             n' := GetNextStep(trace, sch, q, n');
-            n' := n' + 1;
+            n' := n' + 1; // take the step from Hungry to Eating
             if p == q {
                 return;
             }
         }
         n' := GetNextStep(trace, sch, q, n');
-        n' := n' + 1;
+        n' := n' + 1; // take the step from Eating to Thinking
     }
 }
