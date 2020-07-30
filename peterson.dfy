@@ -16,31 +16,31 @@ ensures ValidProcess(q)
 predicate Valid(s: State) {
     (forall p :: p in s.flag.Keys && ValidProcess(p)) &&
     (forall p :: p in s.pc.Keys && ValidProcess(p)) && 
-    (forall p :: ValidProcess(p) && (s.pc[p] == cs <==> (s.flag[p] && s.turn == p))) 
+    (forall p :: ValidProcess(p) && (s.pc[p] == cs ==> (s.flag[p] && s.turn == p))) 
 }
 
-predicate Init(s: State) {
-    Valid(s) &&
-    s.flag[0] == s.flag[1] == false &&
-    s.turn == 0 &&
-    s.pc[0] == a1 && s.pc[1] == a1
-}
+// predicate Init(s: State) {
+//     Valid(s) &&
+//     s.flag[0] == s.flag[1] == false &&
+//     s.turn == 0 &&
+//     s.pc[0] == a1 && s.pc[1] == a1
+// }
 
-predicate Next(s: State, s': State) {
-    Valid(s) &&
-    exists p : Process :: ValidProcess(p) && NextP(p, s, s')
-}
+// predicate Next(s: State, s': State) {
+//     Valid(s) &&
+//     exists p : Process :: ValidProcess(p) && NextP(p, s, s')
+// }
 
-predicate NextP(p: Process, s: State, s': State)
-requires Valid(s) && ValidProcess(p)
-{
-    (s.pc[p] == a1 && stmt_a1(p, s, s')) ||
-    (s.pc[p] == a2 && stmt_a2(p, s, s')) ||
-    (s.pc[p] == a3a && stmt_a3a(p, s, s')) ||
-    (s.pc[p] == a3b && stmt_a3b(p, s, s')) ||
-    (s.pc[p] == cs && stmt_cs(p, s, s')) ||
-    (s.pc[p] == a4 && stmt_a4(p, s, s'))
-}
+// predicate NextP(p: Process, s: State, s': State)
+// requires Valid(s) && ValidProcess(p)
+// {
+//     (s.pc[p] == a1 && stmt_a1(p, s, s')) ||
+//     (s.pc[p] == a2 && stmt_a2(p, s, s')) ||
+//     (s.pc[p] == a3a && stmt_a3a(p, s, s')) ||
+//     (s.pc[p] == a3b && stmt_a3b(p, s, s')) ||
+//     (s.pc[p] == cs && stmt_cs(p, s, s')) ||
+//     (s.pc[p] == a4 && stmt_a4(p, s, s'))
+// }
 
 predicate stmt_a1(p: Process, s: State, s': State) 
 requires ValidProcess(p) && Valid(s) && s.pc[p] == a1
