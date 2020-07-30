@@ -15,7 +15,8 @@ ensures ValidProcess(q)
 
 predicate Valid(s: State) {
     (forall p :: p in s.flag.Keys && ValidProcess(p)) &&
-    forall p :: p in s.pc.Keys && ValidProcess(p)
+    (forall p :: p in s.pc.Keys && ValidProcess(p)) && 
+    (forall p :: ValidProcess(p) && (s.pc[p] == cs <==> (s.flag[p] && s.turn == p))) 
 }
 
 predicate Init(s: State) {
@@ -84,7 +85,7 @@ requires ValidProcess(p) && Valid(s) && s.pc[p] == a4
 
 // Mutual Exclusion
 lemma MutualExclusion(s: State, p: Process, q: Process)
-requires Valid(s)
+requires Valid(s) && ValidProcess(p) && ValidProcess(q)
 requires s.pc[p] == cs && s.pc[q] == cs
 ensures p == q
 {
