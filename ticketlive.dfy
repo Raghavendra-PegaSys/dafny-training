@@ -11,7 +11,7 @@ predicate Valid(s: TSState)
     (forall p :: p in P && s.cs[p] != Thinking ==> s.serving <= s.t[p] < s.ticket) &&
     (forall p, q :: p in P && q in P && p != q && s.cs[p] != Thinking && s.cs[q] != Thinking ==> s.t[p] != s.t[q]) &&
     (forall p :: p in P && s.cs[p] == Eating ==> s.t[p] == s.serving) &&
-    (forall i :: s.serving <= i < s.ticket ==> TicketIsInUse(s, i))
+    (forall i :: s.serving <= i < s.ticket ==> TicketIsInUse(s, i)) 
 }
 
 lemma MutualExclusion(s: TSState, p: Process, q: Process)
@@ -97,7 +97,23 @@ requires IsSchedule(sch)
 predicate TicketIsInUse(s: TSState, i : int)
 requires s.cs.Keys == s.t.Keys == P
 {
-    exists p :: p in P && s.cs[p] != Thinking && s.t[p] == i
+    exists p :: p in P && TicketIsInUseBy(s, i, p)
+}
+
+predicate TicketIsInUseBy(s: TSState, i: int, p: Process) 
+requires p in P
+requires s.cs.Keys == s.t.Keys == P
+{
+    s.cs[p] != Thinking && s.t[p] == i
+}
+
+function ProcessWithTicket(s: TSState, i: int) : Process
+requires Valid(s)
+requires s.serving <=i < s.ticket
+{
+    assert TicketIsInUse(s, i);
+    var p :|  p in P && TicketIsInUseBy(s, i, p);
+    p
 }
 
 function CurrentlyServedProcess(s: TSState) : Process
@@ -150,5 +166,17 @@ ensures n <= n' && trace(n').cs[p] == Eating
         }
         n' := GetNextStep(trace, sch, q, n');
         n' := n' + 1; // take the step from Eating to Thinking
+    }
+}
+
+lemma Invariance(s: TSState, s': TSState)
+ensures Init(s) ==> Valid(s)
+ensures Valid(s) && Next(s,s') ==> Valid(s')
+{
+    if(Valid(s) && Next(s, s')) {
+        forall i | s'.serving <= i < s.ticket
+        ensures TicketIsInUse(s', i) {
+            assert TicketIsInUseBy(s' , i, ProcessWithTicket(s, i));
+        }
     }
 }
