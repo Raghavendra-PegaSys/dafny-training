@@ -114,3 +114,38 @@ ensures Valid(s) && Next(s,s') ==> Valid(s')
 {
 
 }
+
+// Liveness
+type Schedule = nat -> Process
+
+predicate IsSchedule(sch: Schedule) {
+    forall i :: ValidProcess(sch(i))
+}
+
+predicate FairSchedule(sch: Schedule) {
+    && IsSchedule(sch)
+    && forall p, n :: ValidProcess(p) ==> HasNext(sch, p, n)
+}
+
+predicate HasNext(sch: Schedule, p : Process, n: nat) {
+    exists n' :: n <= n' && sch(n') == p
+}
+
+type Trace = nat -> State
+
+predicate IsTrace(t: Trace, sch: Schedule) 
+requires IsSchedule(sch)
+{
+    && Init(t(0))
+    && forall i : nat :: Valid(t(i)) && NextP(sch(i), t(i), t(i+1))
+}
+
+lemma Liveness(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
+requires ValidProcess(p)
+requires FairSchedule(sch)
+requires IsTrace(t, sch)
+requires t(n).flag[p]
+ensures n <= n' && t(n').pc[p] == cs
+{
+    
+}
