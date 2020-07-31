@@ -108,7 +108,15 @@ ensures p == q
 // Invariance
 lemma Invariance(s: State, s':State)
 ensures Init(s) ==> Valid(s)
-ensures Valid(s) && Next(s, s') ==> Valid(s')
+ensures Valid(s) && Next(s,s') ==> Valid(s')
+{
+
+}
+
+
+lemma lemma_a1(p: Process, s: State, s': State)
+requires Valid(s) && ValidProcess(p) && stmt_a1(p, s, s')
+ensures Valid(s')
 {
 
 }
