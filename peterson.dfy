@@ -64,7 +64,8 @@ predicate stmt_a3a(p: Process, s: State, s': State)
 requires ValidProcess(p) && Valid(s)
 {
     && s.pc[p] == a3a
-    && ((s.flag[Other(p)] && s'.pc == s.pc[p := a3b]) || (!s.flag[Other(p)] && s'.pc == s.pc[p := cs]))
+    && (s.flag[Other(p)] && s'.pc == s.pc[p := a3b]) 
+    && (!s.flag[Other(p)] && s'.pc == s.pc[p := cs])
     && s'.turn == s.turn
     && s'.flag == s.flag
 }
@@ -73,7 +74,8 @@ predicate stmt_a3b(p: Process, s: State, s': State)
 requires ValidProcess(p) && Valid(s) 
 {
     && s.pc[p] == a3b
-    && ((s.turn == Other(p) && s'.pc == s.pc[p := a3a]) || (s.turn != Other(p) && s'.pc == s.pc[p := cs]))
+    && (s.turn == Other(p) && s'.pc == s.pc[p := a3a])
+    && (s.turn != Other(p) && s'.pc == s.pc[p := cs])
     && s'.turn == s.turn
     && s'.flag == s.flag
 }
@@ -109,14 +111,6 @@ ensures p == q
 lemma Invariance(s: State, s':State)
 ensures Init(s) ==> Valid(s)
 ensures Valid(s) && Next(s,s') ==> Valid(s')
-{
-
-}
-
-
-lemma lemma_a1(p: Process, s: State, s': State)
-requires Valid(s) && ValidProcess(p) && stmt_a1(p, s, s')
-ensures Valid(s')
 {
 
 }
