@@ -140,6 +140,45 @@ requires IsSchedule(sch)
     && forall i : nat :: Valid(t(i)) && NextP(sch(i), t(i), t(i+1))
 }
 
+predicate IsProcessInCS(s: State)
+requires Valid(s) 
+{
+    s.pc[0] == cs || s.pc[1] == cs
+}
+
+function GetProcessInCS(s: State) : Process
+requires Valid(s)
+requires IsProcessInCS(s)
+{
+    var p :| s.pc[p] == cs;
+    p
+}
+
+// Get the number where the process p takes the next step in trace t
+lemma GetNextScheduledStep(p: Process, t: Trace, sch: Schedule, n: nat) returns (n': nat)
+requires Valid(t(n))
+requires ValidProcess(p) 
+requires IsTrace(t, sch)
+requires FairSchedule(sch)
+// p is being scheduled for the first time on or after n at n'
+ensures n <= n' && sch(n') == p
+// so the state of p does not change from n to n'
+ensures forall i :: n <= i < n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] == t(n).flag[p])
+{
+    assert HasNext(sch, p, n);
+    var u :| n <= u && sch(u) == p;
+    n' := n;
+
+    while sch(n') != p && n' < u
+    decreases u - n'
+    invariant n' <= u
+    invariant forall i :: n <= i <= n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] == t(n).flag[p])
+    {
+        n' := n' + 1;
+        assert t(n').pc[p] == t(n).pc[p] && t(n').flag[p] == t(n).flag[p];
+    }
+}
+
 lemma Liveness(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
 requires ValidProcess(p)
 requires FairSchedule(sch)
@@ -147,5 +186,13 @@ requires IsTrace(t, sch)
 requires t(n).flag[p]
 ensures n <= n' && t(n').pc[p] == cs
 {
-    
+    // Get the step where process p is scheduled
+    n' := GetNextScheduledStep(p, t, sch, n);
+
+    // Outerloop ensures that the control state of process p changes till it hits 'cs'
+    while t(n').pc[p] != cs
+    {
+        n' := GetNextScheduledStep(p, t, sch, n' + 1);
+    }
+
 }
