@@ -188,11 +188,22 @@ ensures n <= n' && t(n').pc[p] == cs
 {
     // Get the step where process p is scheduled
     n' := GetNextScheduledStep(p, t, sch, n);
+    // assert that p is scheduled at step n'
+    assert sch(n') == p;
+    // assert that p takes a step at n' taking the state from t(n') to t(n'+1)
+    assert NextP(p, t(n'), t(n'+1));
+
+    var possibleStates : set<CState> := {a1, a2, a3a, a3b, cs, a4};
 
     // Outerloop ensures that the control state of process p changes till it hits 'cs'
     while t(n').pc[p] != cs
+    decreases |possibleStates|; 
+    invariant t(n').pc[p] != t(n'+1).pc[p];
+    //invariant t(n').pc[p] in possibleStates
     {
+        possibleStates := possibleStates - {t(n').pc[p]};
         n' := GetNextScheduledStep(p, t, sch, n' + 1);
     }
 
+    assert t(n').pc[p] == cs;
 }
