@@ -155,7 +155,7 @@ requires IsProcessInCS(s)
 }
 
 // Get the number where the process p takes the next step in trace t
-lemma GetNextScheduledStep(p: Process, t: Trace, sch: Schedule, n: nat) returns (n': nat)
+lemma LemmaGetNextScheduledStep(p: Process, t: Trace, sch: Schedule, n: nat) returns (n': nat)
 requires Valid(t(n))
 requires ValidProcess(p) 
 requires IsTrace(t, sch)
@@ -179,31 +179,102 @@ ensures forall i :: n <= i < n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] ==
     }
 }
 
-lemma Liveness(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
+lemma LemmaTurnProcessGetsCSEventually(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
+requires ValidProcess(p)
+requires t(n).flag[p] == true;
+requires t(n).turn == p
+requires t(n).pc[p] == a3a
+ensures n <= n' && t(n').pc[p] == cs
+{
+
+}
+
+lemma LemmaProcessRelinquishes(sch: Schedule, t: Trace, p: Process, n: nat) returns (n': nat)
+requires ValidProcess(p)
+requires Valid(t(n))
+requires t(n).pc[p] == cs
+ensures n <= n' && t(n').flag[p] == false
+{
+
+}
+
+lemma LemmaProcessGetsCSEventually2(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
+requires ValidProcess(p)
+requires Valid(t(n))
+requires t(n).flag[Other(p)] == false
+requires t(n).pc[p] == a3a
+ensures n <= n' && t(n').pc[p] == cs
+{
+
+}
+
+lemma LemmaLiveness(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
 requires ValidProcess(p)
 requires FairSchedule(sch)
 requires IsTrace(t, sch)
 requires t(n).flag[p]
 ensures n <= n' && t(n').pc[p] == cs
 {
-    // Get the step where process p is scheduled
-    n' := GetNextScheduledStep(p, t, sch, n);
-    // assert that p is scheduled at step n'
-    assert sch(n') == p;
-    // assert that p takes a step at n' taking the state from t(n') to t(n'+1)
+    n' := LemmaGetNextScheduledStep(p, t, sch, n);
     assert NextP(p, t(n'), t(n'+1));
 
-    var possibleStates : set<CState> := {a1, a2, a3a, a3b, cs, a4};
-
-    // Outerloop ensures that the control state of process p changes till it hits 'cs'
-    while t(n').pc[p] != cs
-    decreases |possibleStates|; 
-    invariant t(n').pc[p] != t(n'+1).pc[p];
-    //invariant t(n').pc[p] in possibleStates
+    match t(n').pc[p]
+    case a4 =>
     {
-        possibleStates := possibleStates - {t(n').pc[p]};
-        n' := GetNextScheduledStep(p, t, sch, n' + 1);
+        // Push it to n' where t(n').pc[p] == a1
+        assume t(n').pc[p] == cs;
     }
 
-    assert t(n').pc[p] == cs;
+    case a1 => 
+        // Push it to the place when t(n').pc[p] == a3a
+        assert t(n'+1).pc[p] == a2;
+        assume t(n').pc[p] == cs;
+        n' := LemmaLiveness(sch, t, p, n'+1); // Problem with proving termination
+        assert t(n').pc[p] == cs;
+
+    case a2 =>
+        assert t(n'+1).pc[p] == a3a;
+        assume t(n').pc[p] == cs;
+        n' := LemmaLiveness(sch, t, p, n'+1); // Problem with proving termination
+        assert t(n').pc[p] == cs;
+
+    case a3a =>
+    if t(n').flag[Other(p)] == true
+    {
+        // Get the next step n' where t(n').pc[p] == a3b
+        assert t(n'+1).pc[p] == a3b;
+        n' := LemmaLiveness(sch, t, p, n'+1);
+        assert t(n').pc[p] == cs;
+    } else {
+        n' := LemmaGetNextScheduledStep(p, t, sch, n'+1);
+        assert t(n').pc[p] == cs;
+    }
+
+    case a3b =>
+        assert t(n').turn == p || t(n').turn == Other(p);
+        if t(n').turn == p
+        {
+            // Jump to n' where t(n').pc[p] == cs
+            n' := n' + 1;
+            assert t(n').pc[p] == cs;
+        } else {
+            n' := n' + 1;
+            assert t(n'+1).pc[p] == a3a;
+            if t(n').flag[Other(p)] == true
+            {
+                // 1. Jump to the state 
+                // We can prove that we reach n' s.t. pc[Other(p)] == cs using the above lemma
+                // And then it will relinquish saying that we reach n'' s.t. flag[Other(p)] == false
+                // From then it is same as 2b
+            } else
+
+                // t(n').turn == Other(p) && t(n').flag[Other(p)] == false
+            {
+                // Reach n' such that pc[p] == a3a
+                assume t(n').pc[p] == cs;
+            }
+        }
+    
+    case cs =>
+        return;
 }
