@@ -41,10 +41,29 @@ lemma monotonicPowerOf2(n: nat, m: nat)
 //  Prove this lemma
 lemma addPowerOf2(n: nat, m : nat)
     ensures powerOf2(n) * powerOf2(m) == powerOf2(n + m)  
-// {
-//     //  @todo: write the proof instead of assuming it.
-//     assume(powerOf2(n) * powerOf2(m) == powerOf2(n + m) );
-// }
+{
+    //  @todo: write the proof instead of assuming it.
+    // assume(powerOf2(n) * powerOf2(m) == powerOf2(n + m) );
+    if(n == 0) {
+        calc == {
+            powerOf2(n) * powerOf2(m);
+            powerOf2(0) * powerOf2(m);
+            1 * powerOf2(m);
+            powerOf2(m);
+            powerOf2(m + 0);
+            powerOf2(m + n);
+        }
+    } else {
+        calc == {
+            powerOf2(n) * powerOf2(m);
+            2 * powerOf2(n-1) * powerOf2(m);
+            { addPowerOf2(n-1, m); }
+            2 * powerOf2(n - 1 + m); 
+            powerOf2(n - 1 + m + 1);
+            powerOf2(n + m);
+        }
+    }
+}
 
 //=============================================================================
 //  Tree examples 
@@ -95,8 +114,9 @@ function height(root : Tree) : nat
 function method nodesCount(root : Tree) : nat
     ensures nodesCount(root) >= 1
 {
-    //  Define this function.
-    1
+    match root 
+        case Leaf => 1
+        case Node(left, right) => nodesCount(left) + nodesCount(right) + 1
 }
 
 function method leavesCount(root : Tree) : nat
@@ -113,7 +133,23 @@ lemma upperBoundForNodesCount(root : Tree)
     ensures nodesCount(root) <= powerOf2(height(root)) - 1
 {
     //  Write the proof for this lemma.
-    assume(nodesCount(root) <= powerOf2(height(root)) - 1);
+    // assume(nodesCount(root) <= powerOf2(height(root)) - 1);
+    match root
+        case Leaf => 
+            calc {
+                nodesCount(root);
+                1;
+                powerOf2(1) - 1;
+                powerOf2(height(root)) - 1;
+            }
+        case Node(l, r) =>
+            calc {
+                nodesCount(root);
+                1 + nodesCount(l) + nodesCount(r);
+                {upperBoundForNodesCount(l); upperBoundForNodesCount(r); }
+                <= 1 + powerOf2(height(l)) - 1 + powerOf2(height(r)) - 1;
+                
+            }
 }
 
 /**

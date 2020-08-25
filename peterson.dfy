@@ -17,6 +17,7 @@ predicate Valid(s: State) {
     && (forall p :: p in s.flag.Keys && ValidProcess(p))
     && (forall p :: p in s.pc.Keys && ValidProcess(p))
     && (forall p :: ValidProcess(p) && (s.pc[p] == cs ==> (s.flag[p] && s.turn == p))) 
+    && (s.turn == 0 || s.turn == 1)
 }
 
 predicate Init(s: State) {
@@ -146,14 +147,6 @@ requires Valid(s)
     s.pc[0] == cs || s.pc[1] == cs
 }
 
-function GetProcessInCS(s: State) : Process
-requires Valid(s)
-requires IsProcessInCS(s)
-{
-    var p :| s.pc[p] == cs;
-    p
-}
-
 // Get the number where the process p takes the next step in trace t
 lemma LemmaGetNextScheduledStep(p: Process, t: Trace, sch: Schedule, n: nat) returns (n': nat)
 requires Valid(t(n))
@@ -162,6 +155,7 @@ requires IsTrace(t, sch)
 requires FairSchedule(sch)
 // p is being scheduled for the first time on or after n at n'
 ensures n <= n' && sch(n') == p
+ensures forall k :: n <= k <= n' ==> distanceToCS(p, t(k)) == distanceToCS(p, t(n))
 // so the state of p does not change from n to n'
 ensures forall i :: n <= i < n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] == t(n).flag[p])
 {
@@ -179,33 +173,22 @@ ensures forall i :: n <= i < n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] ==
     }
 }
 
-lemma LemmaTurnProcessGetsCSEventually(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
+function distanceToCS(p: Process, s: State) : nat 
+requires Valid(s)
 requires ValidProcess(p)
-requires t(n).flag[p] == true;
-requires t(n).turn == p
-requires t(n).pc[p] == a3a
-ensures n <= n' && t(n').pc[p] == cs
 {
-
+    match s.pc[p]
+    case a1 => 4
+    case a2 => 3
+    case a3a => 2
+    case a3b => 1
+    case cs => 0
+    case a4 => 5
 }
 
-lemma LemmaProcessRelinquishes(sch: Schedule, t: Trace, p: Process, n: nat) returns (n': nat)
-requires ValidProcess(p)
-requires Valid(t(n))
-requires t(n).pc[p] == cs
-ensures n <= n' && t(n').flag[p] == false
+predicate ProcessIsBlockedInState(p: Process, s: State)
 {
-
-}
-
-lemma LemmaProcessGetsCSEventually2(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
-requires ValidProcess(p)
-requires Valid(t(n))
-requires t(n).flag[Other(p)] == false
-requires t(n).pc[p] == a3a
-ensures n <= n' && t(n').pc[p] == cs
-{
-
+    s.turn == Other(p) && s.flag[Other(p)]
 }
 
 lemma LemmaLiveness(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
@@ -215,66 +198,90 @@ requires IsTrace(t, sch)
 requires t(n).flag[p]
 ensures n <= n' && t(n').pc[p] == cs
 {
+    // Go to the position where p is waiting to enter CS
     n' := LemmaGetNextScheduledStep(p, t, sch, n);
-    assert NextP(p, t(n'), t(n'+1));
+    if(t(n').pc[p] == cs) {
+        return;
+    } 
 
-    match t(n').pc[p]
-    case a4 =>
+    while(t(n').pc[p] != a3a && t(n').pc[p] != a3b) 
+    decreases distanceToCS(p, t(n'))
+    invariant NextP(p, t(n'), t(n'+1))
+    invariant Valid(t(n'))
+    invariant t(n').pc[p] != cs
     {
-        // Push it to n' where t(n').pc[p] == a1
-        assume t(n').pc[p] == cs;
-    }
-
-    case a1 => 
-        // Push it to the place when t(n').pc[p] == a3a
-        assert t(n'+1).pc[p] == a2;
-        assume t(n').pc[p] == cs;
-        n' := LemmaLiveness(sch, t, p, n'+1); // Problem with proving termination
-        assert t(n').pc[p] == cs;
-
-    case a2 =>
-        assert t(n'+1).pc[p] == a3a;
-        assume t(n').pc[p] == cs;
-        n' := LemmaLiveness(sch, t, p, n'+1); // Problem with proving termination
-        assert t(n').pc[p] == cs;
-
-    case a3a =>
-    if t(n').flag[Other(p)] == true
-    {
-        // Get the next step n' where t(n').pc[p] == a3b
-        assert t(n'+1).pc[p] == a3b;
-        n' := LemmaLiveness(sch, t, p, n'+1);
-        assert t(n').pc[p] == cs;
-    } else {
         n' := LemmaGetNextScheduledStep(p, t, sch, n'+1);
-        assert t(n').pc[p] == cs;
     }
 
-    case a3b =>
-        assert t(n').turn == p || t(n').turn == Other(p);
-        if t(n').turn == p
-        {
-            // Jump to n' where t(n').pc[p] == cs
+    // Proceed to Critical Section case-wise
+    if(t(n').pc[p] == a3a) {
+        if(ProcessIsBlockedInState(p, t(n'))) {
+            n' := LemmaHelper1(t, n', p, sch);
+            assert !t(n').flag[Other(p)];
+            n' := LemmaGetNextScheduledStep(p, t, sch, n');
+            assert !t(n').flag[Other(p)]; // I have no idea how this is maintained.
             n' := n' + 1;
             assert t(n').pc[p] == cs;
         } else {
+            if(t(n').flag[Other(p)]) {
+                assert t(n').turn == p;
+                assert t(n'+1).pc[p] == a3b;
+                n' := LemmaGetNextScheduledStep(p, t, sch, n'+1);
+            }             
             n' := n' + 1;
-            assert t(n'+1).pc[p] == a3a;
-            if t(n').flag[Other(p)] == true
-            {
-                // 1. Jump to the state 
-                // We can prove that we reach n' s.t. pc[Other(p)] == cs using the above lemma
-                // And then it will relinquish saying that we reach n'' s.t. flag[Other(p)] == false
-                // From then it is same as 2b
-            } else
-
-                // t(n').turn == Other(p) && t(n').flag[Other(p)] == false
-            {
-                // Reach n' such that pc[p] == a3a
-                assume t(n').pc[p] == cs;
-            }
+            assert t(n').pc[p] == cs;
+            return;
         }
-    
-    case cs =>
-        return;
+    } else {
+        assert t(n').pc[p] == a3b;
+        n' := LemmaHelper2(t, n, p, sch);
+        assert t(n').turn == p;
+        n' := LemmaGetNextScheduledStep(p, t, sch, n');
+        assert t(n').turn == p; // I have no idea how this is maintained.
+        n' := n' + 1;
+        assert t(n').pc[p] == cs;
+    }
+}
+
+lemma LemmaFlagAndPC1(s: State, p: Process)
+requires Valid(s)
+requires ValidProcess(p)
+ensures s.pc[p] == a1 <==> !s.flag[p] 
+{
+
+}
+
+lemma LemmaFlagAndPC2(s: State, p: Process)
+requires Valid(s)
+requires ValidProcess(p)
+ensures (s.pc[p] == a2 || s.pc[p] == a3a || s.pc[p] == a3b || s.pc[p] == cs || s.pc[p] == a4) <==> s.flag[p] 
+{
+
+}
+
+predicate ProcessBlockedIn(p: Process, s: State) {
+    s.turn == Other(p) && s.flag[Other(p)]
+}
+
+lemma LemmaHelper1(t: Trace, n: nat, p: Process, sch: Schedule) returns (n':nat)
+requires Valid(t(n))
+requires ValidProcess(p)
+requires IsTrace(t, sch)
+requires FairSchedule(sch)
+requires t(n).pc[p] == a3a
+requires ProcessBlockedIn(p, t(n))
+ensures n <= n' && !t(n').flag[Other(p)]
+{
+
+}
+
+lemma LemmaHelper2(t: Trace, n: nat, p: Process, sch: Schedule) returns (n':nat)
+requires Valid(t(n))
+requires ValidProcess(p)
+requires IsTrace(t, sch)
+requires FairSchedule(sch)
+requires t(n).pc[p] == a3b
+ensures n <= n' && t(n').turn == p
+{
+
 }
