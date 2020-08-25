@@ -154,10 +154,11 @@ requires ValidProcess(p)
 requires IsTrace(t, sch)
 requires FairSchedule(sch)
 // p is being scheduled for the first time on or after n at n'
-ensures n <= n' && sch(n') == p
-ensures forall k :: n <= k <= n' ==> distanceToCS(p, t(k)) == distanceToCS(p, t(n))
-// so the state of p does not change from n to n'
+ensures n <= n' && (forall k :: n <= k < n' ==> sch(k) != p) && sch(n') == p
+// the state of p does not change from n to n'
 ensures forall i :: n <= i < n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] == t(n).flag[p])
+// p has not executed, hence distance does not change
+ensures forall k :: n <= k <= n' ==> distanceToCS(p, t(k)) == distanceToCS(p, t(n))
 {
     assert HasNext(sch, p, n);
     var u :| n <= u && sch(u) == p;
@@ -213,75 +214,39 @@ ensures n <= n' && t(n').pc[p] == cs
         n' := LemmaGetNextScheduledStep(p, t, sch, n'+1);
     }
 
-    // Proceed to Critical Section case-wise
-    if(t(n').pc[p] == a3a) {
-        if(ProcessIsBlockedInState(p, t(n'))) {
-            n' := LemmaHelper1(t, n', p, sch);
-            assert !t(n').flag[Other(p)];
-            n' := LemmaGetNextScheduledStep(p, t, sch, n');
-            assert !t(n').flag[Other(p)]; // I have no idea how this is maintained.
-            n' := n' + 1;
-            assert t(n').pc[p] == cs;
-        } else {
-            if(t(n').flag[Other(p)]) {
-                assert t(n').turn == p;
-                assert t(n'+1).pc[p] == a3b;
-                n' := LemmaGetNextScheduledStep(p, t, sch, n'+1);
-            }             
-            n' := n' + 1;
-            assert t(n').pc[p] == cs;
-            return;
-        }
-    } else {
-        assert t(n').pc[p] == a3b;
-        n' := LemmaHelper2(t, n, p, sch);
-        assert t(n').turn == p;
-        n' := LemmaGetNextScheduledStep(p, t, sch, n');
-        assert t(n').turn == p; // I have no idea how this is maintained.
-        n' := n' + 1;
-        assert t(n').pc[p] == cs;
+    if(ProcessIsBlockedInState(p, t(n'))) {
+        n' := LemmaHelper(t, n', p, sch);
+        // At n', p is not blocked anymore.
+        n' := LemmaGetNextScheduledStep(p, t, sch, n'); 
     }
+
+    assert !ProcessIsBlockedInState(p, t(n')); // I do not know how this is proved. I was expecting the previous GetNextScheduledStep can mess up the blocking status.
+
+    if(t(n').pc[p] == a3a && t(n').flag[Other(p)]) {
+        assert t(n').turn == p;
+        n' := LemmaGetNextScheduledStep(p, t, sch, n'+1);
+    }             
+    n' := n' + 1;
+    assert t(n').pc[p] == cs;
 }
 
-lemma LemmaFlagAndPC1(s: State, p: Process)
-requires Valid(s)
-requires ValidProcess(p)
-ensures s.pc[p] == a1 <==> !s.flag[p] 
-{
-
-}
-
-lemma LemmaFlagAndPC2(s: State, p: Process)
-requires Valid(s)
-requires ValidProcess(p)
-ensures (s.pc[p] == a2 || s.pc[p] == a3a || s.pc[p] == a3b || s.pc[p] == cs || s.pc[p] == a4) <==> s.flag[p] 
-{
-
-}
-
-predicate ProcessBlockedIn(p: Process, s: State) {
-    s.turn == Other(p) && s.flag[Other(p)]
-}
-
-lemma LemmaHelper1(t: Trace, n: nat, p: Process, sch: Schedule) returns (n':nat)
+lemma LemmaHelper(t: Trace, n: nat, p: Process, sch: Schedule) returns (n':nat)
 requires Valid(t(n))
 requires ValidProcess(p)
 requires IsTrace(t, sch)
 requires FairSchedule(sch)
-requires t(n).pc[p] == a3a
-requires ProcessBlockedIn(p, t(n))
-ensures n <= n' && !t(n').flag[Other(p)]
+requires t(n).pc[p] == a3a || t(n).pc[p] == a3b
+requires ProcessIsBlockedInState(p, t(n))
+ensures n <= n' 
+ensures t(n').pc[p] == a3a || t(n').pc[p] == a3b
+ensures t(n').pc[p] == a3a ==> !t(n').flag[Other(p)]
+ensures t(n').pc[p] == a3b ==> t(n').turn == p
 {
+    var q := Other(p);
+    n' := LemmaGetNextScheduledStep(q, t, sch, n);
 
-}
-
-lemma LemmaHelper2(t: Trace, n: nat, p: Process, sch: Schedule) returns (n':nat)
-requires Valid(t(n))
-requires ValidProcess(p)
-requires IsTrace(t, sch)
-requires FairSchedule(sch)
-requires t(n).pc[p] == a3b
-ensures n <= n' && t(n').turn == p
-{
-
+    while t(n').flag[q] 
+    {
+        n' := LemmaGetNextScheduledStep(q, t, sch, n' + 1);
+    }
 }
