@@ -17,6 +17,7 @@ predicate Valid(s: State) {
     && (forall p :: p in s.flag.Keys && ValidProcess(p))
     && (forall p :: p in s.pc.Keys && ValidProcess(p))
     && (forall p :: ValidProcess(p) && (s.pc[p] == cs ==> (s.flag[p] && s.turn == p))) 
+    && (forall p :: ValidProcess(p) && (s.pc[p] != a1 <==> s.flag[p]))
     && (s.turn == 0 || s.turn == 1)
 }
 
@@ -153,10 +154,12 @@ requires Valid(t(n))
 requires ValidProcess(p) 
 requires IsTrace(t, sch)
 requires FairSchedule(sch)
+ensures n <= n' 
 // p is being scheduled for the first time on or after n at n'
-ensures n <= n' && (forall k :: n <= k < n' ==> sch(k) != p) && sch(n') == p
+ensures forall k :: n <= k < n' ==> sch(k) != p
+ensures sch(n') == p
 // the state of p does not change from n to n'
-ensures forall i :: n <= i < n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] == t(n).flag[p])
+ensures forall i :: n <= i <= n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] == t(n).flag[p])
 // p has not executed, hence distance does not change
 ensures forall k :: n <= k <= n' ==> distanceToCS(p, t(k)) == distanceToCS(p, t(n))
 {
@@ -168,6 +171,7 @@ ensures forall k :: n <= k <= n' ==> distanceToCS(p, t(k)) == distanceToCS(p, t(
     decreases u - n'
     invariant n' <= u
     invariant forall i :: n <= i <= n' ==> (t(i).pc[p] == t(n).pc[p] && t(i).flag[p] == t(n).flag[p])
+    invariant forall i :: n <= i < n' ==> sch(i) != p
     {
         n' := n' + 1;
         assert t(n').pc[p] == t(n).pc[p] && t(n').flag[p] == t(n).flag[p];
@@ -188,6 +192,8 @@ requires ValidProcess(p)
 }
 
 predicate ProcessIsBlockedInState(p: Process, s: State)
+requires ValidProcess(p)
+requires Valid(s)
 {
     s.turn == Other(p) && s.flag[Other(p)]
 }
@@ -215,7 +221,7 @@ ensures n <= n' && t(n').pc[p] == cs
     }
 
     if(ProcessIsBlockedInState(p, t(n'))) {
-        n' := LemmaHelper(t, n', p, sch);
+        n' := LemmaUnblocksEventually(t, n', p, sch);
         // At n', p is not blocked anymore.
         n' := LemmaGetNextScheduledStep(p, t, sch, n'); 
     }
@@ -230,7 +236,34 @@ ensures n <= n' && t(n').pc[p] == cs
     assert t(n').pc[p] == cs;
 }
 
-lemma LemmaHelper(t: Trace, n: nat, p: Process, sch: Schedule) returns (n':nat)
+lemma LemmaProcessIna3WhenBlocked(p: Process, t: Trace, sch: Schedule, n: nat, m: nat)
+requires Valid(t(n))
+requires Valid(t(m))
+requires ValidProcess(p)
+requires FairSchedule(sch)
+requires IsTrace(t, sch)
+requires ProcessIsBlockedInState(p, t(n))
+requires t(n).pc[p] == a3a || t(n).pc[p] == a3b
+requires n <= m
+requires forall k :: n <= k < m ==> sch(k) == p
+requires sch(m) == Other(p)
+ensures forall k :: n <= k <= m ==> (t(k).pc[p] == a3a || t(k).pc[p] == a3b)
+ensures forall k :: n <= k <= m ==> ProcessIsBlockedInState(p, t(k))
+decreases m - n
+{
+    if(m == n) {
+        // Thanks Dafny
+    } else {
+        if(t(n).pc[p] == a3a) {
+            LemmaProcessIna3WhenBlocked(p, t, sch, n+1, m);
+        } else {
+            assert t(n+1).pc[p] == a3a;
+            LemmaProcessIna3WhenBlocked(p, t, sch, n+1, m);
+        }
+    }
+}
+
+lemma LemmaUnblocksEventually(t: Trace, n: nat, p: Process, sch: Schedule) returns (n':nat)
 requires Valid(t(n))
 requires ValidProcess(p)
 requires IsTrace(t, sch)
@@ -239,14 +272,37 @@ requires t(n).pc[p] == a3a || t(n).pc[p] == a3b
 requires ProcessIsBlockedInState(p, t(n))
 ensures n <= n' 
 ensures t(n').pc[p] == a3a || t(n').pc[p] == a3b
-ensures t(n').pc[p] == a3a ==> !t(n').flag[Other(p)]
-ensures t(n').pc[p] == a3b ==> t(n').turn == p
+ensures !ProcessIsBlockedInState(p, t(n'))
 {
     var q := Other(p);
     n' := LemmaGetNextScheduledStep(q, t, sch, n);
+    LemmaProcessIna3WhenBlocked(p, t, sch, n, n');
+    assert t(n').pc[p] == a3a || t(n').pc[p] == a3b;
+    assert n <= n';
+    assert t(n').flag[Other(p)];
+    assert t(n').pc[q] != a1;
 
-    while t(n').flag[q] 
-    {
+    if(t(n').pc[q] == a2 || t(n').pc[q] == a4) {
+        n' := n' + 1;
+        return;        
+    }
+
+    if(t(n').pc[q] == a3a) {
+        n' := LemmaGetNextScheduledStep(q, t, sch, n');
+        n' := n' + 1;
+        assert t(n').pc[q] == a3b;       
+    }
+
+    if(t(n').pc[q] == a3b) {
+        n' := LemmaGetNextScheduledStep(q, t, sch, n');
         n' := LemmaGetNextScheduledStep(q, t, sch, n' + 1);
+        assert t(n').pc[q] == cs;       
+    }
+
+    if(t(n').pc[q] == cs) {
+        var m := LemmaGetNextScheduledStep(q, t, sch, n'+1);
+        LemmaProcessIna3WhenBlocked(p, t, sch, n'+1, m);
+        assert t(m).pc[q] == a4;
+        n' := m + 1;
     }
 }
