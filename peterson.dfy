@@ -205,12 +205,14 @@ requires IsTrace(t, sch)
 requires t(n).flag[p]
 ensures n <= n' && t(n').pc[p] == cs
 {
-    // Go to the position where p is waiting to enter CS
+    // Go to the position where p is scheduled
     n' := LemmaGetNextScheduledStep(p, t, sch, n);
+
     if(t(n').pc[p] == cs) {
         return;
     } 
 
+    // Go to the position where p waits to enter the critical section
     while(t(n').pc[p] != a3a && t(n').pc[p] != a3b) 
     decreases distanceToCS(p, t(n'))
     invariant NextP(p, t(n'), t(n'+1))
@@ -226,8 +228,8 @@ ensures n <= n' && t(n').pc[p] == cs
         n' := LemmaGetNextScheduledStep(p, t, sch, n'); 
     }
 
-    assert !ProcessIsBlockedInState(p, t(n')); // I do not know how this is proved. I was expecting the previous GetNextScheduledStep can mess up the blocking status.
-
+    assert !ProcessIsBlockedInState(p, t(n')); 
+    
     if(t(n').pc[p] == a3a && t(n').flag[Other(p)]) {
         assert t(n').turn == p;
         n' := LemmaGetNextScheduledStep(p, t, sch, n'+1);
