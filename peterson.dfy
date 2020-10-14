@@ -195,7 +195,8 @@ predicate ProcessIsBlockedInState(p: Process, s: State)
 requires ValidProcess(p)
 requires Valid(s)
 {
-    s.turn == Other(p) && s.flag[Other(p)]
+    || (s.pc[p] == a3a ==> s.flag[Other(p)])
+    || (s.pc[p] == a3b ==> s.turn == Other(p))
 }
 
 lemma LemmaLiveness(sch: Schedule, t: Trace, p: Process, n: nat) returns (n':nat)
@@ -239,7 +240,6 @@ ensures n <= n' && t(n').pc[p] == cs
 }
 
 lemma LemmaProcessIna3WhenBlocked(p: Process, t: Trace, sch: Schedule, n: nat, m: nat)
-requires Valid(t(n))
 requires Valid(t(m))
 requires ValidProcess(p)
 requires FairSchedule(sch)
